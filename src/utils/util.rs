@@ -13,6 +13,15 @@ pub fn timestamp_to_date(timestamp: i64) -> AppResult<String> {
     Err(Error::Message("convert timestamp to date error".to_string()).into())
 }
 
+pub fn timestamp_to_datetime(timestamp: i64) -> AppResult<String> {
+    let dt = DateTime::from_timestamp_millis(timestamp);
+    if let Some(dt) = dt {
+        let local_dt = dt.with_timezone(&Local);
+        return Ok(local_dt.format("%Y-%m-%d %H:%M:%S").to_string());
+    }
+    Err(Error::Message("convert timestamp to datetime error".to_string()).into())
+}
+
 pub fn calc_hmac_sha256(key: &[u8], message: &[u8]) -> Result<Vec<u8>, Error> {
     let mut mac = Hmac::<Sha256>::new_from_slice(key)
         .map_err(|e| Error::Message(format!("create hmac error: {:?}", e).to_string()))?;
