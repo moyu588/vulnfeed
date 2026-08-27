@@ -55,7 +55,7 @@ impl From<SyncDataTaskName> for Value {
 }
 
 #[nutype(
-    validate(greater_or_equal = 1, less_or_equal = 60),
+    validate(greater_or_equal = 1, less_or_equal = 720),
     derive(
         Clone, Debug, Display, PartialEq, Eq, PartialOrd, Ord, Hash, AsRef, Deref, Borrow, TryFrom,
         Serialize

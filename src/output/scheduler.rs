@@ -34,7 +34,14 @@ impl Scheduler {
     }
 
     fn create_job(&self, interval_minutes: i32) -> AppResult<tokio_cron_scheduler::Job> {
-        let cron_syntax = format!("0 */{} * * * *", interval_minutes);
+        let cron_syntax = if interval_minutes >= 60 {
+            // 转换为小时：例如 720分钟 = 12小时
+            let hours = interval_minutes / 60;
+            format!("0 0 */{} * * *", hours)
+        } else {
+            // 分钟级别
+            format!("0 */{} * * * *", interval_minutes)
+        };
         log::debug!("Creating job with cron syntax: {}", cron_syntax);
         let job =
             tokio_cron_scheduler::Job::new_async(cron_syntax.as_str(), move |uuid, mut _l| {
