@@ -33,3 +33,10 @@ report.*.json
 
 # logs
 logs/
+
+# -- Secrets safety net (SSH keys, tokens, etc.)
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.pem
+*.key
