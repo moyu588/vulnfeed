@@ -1,0 +1,47 @@
+# CLAUDE.md — vulnfeed 项目记忆
+
+> 本文件是持久化记忆（原 `/openclaw/github/AGENTS.md`，已并入此处），新会话请先读这里再动手。详细文档见文末索引。
+
+## 项目拓扑
+
+- `vulnfeed/`（本仓库）— 二开源码仓库（Rust，入口 `src/cli.rs`，含 `sqlx::migrate!` 启动时自动迁移）
+  - `origin` = `git@github.com:moyu588/vulnfeed.git`（SSH Deploy Key：`/openclaw/github/.ssh/id_ed25519_vulnfeed`，仓库已配 `core.sshCommand`）
+  - `upstream` = `https://github.com/fan-tastic-z/vulnfeed.git`
+  - 分支策略：`main` 镜像上游保持干净；`dev` 为二开分支（含自定义改动 + 文档）
+  - 2026-09-02 核查：上游 `main` = 本地 `main` = `0256bcd`，无待合并更新
+
+## 开发工作流（用户需求，务必遵循）
+
+1. **二开只在本地 `dev` 分支进行**，提交后推送到 `origin`（fork 仓库）保存：
+   `git push origin dev`
+2. **持续关注上游 `upstream/main` 的功能更新**，有更新时合并到本地：
+   - 查上游状态：因 git smart-HTTP 挂死问题，用 GitHub API（`https://api.github.com/repos/fan-tastic-z/vulnfeed/branches/main`）对比本地 `main` 的 commit sha
+   - 拉取上游：走 SSH 或先排查代理；同步流程详见 `docs/二开与上游同步方案.md`
+   - 合并路径：`upstream/main` → 本地 `main`（快进，保持干净）→ 再 `merge main` 到 `dev`（二开改动与上游更新汇合）
+   - 合并后必查 `git diff main..dev -- migrations/`，确认迁移仍是增量（见生产红线 §2）
+3. **`main` 不直接提交二开改动**，仅作为上游镜像与合并中转
+- `../vulnfeed-deploy/` — **生产环境**（docker compose）
+  - `postgres:14.0` + `vulnfeed:latest`（镜像由本仓库 `Dockerfile` 构建）
+  - **生产数据在 `../vulnfeed-deploy/data/`**（bind mount 到 postgres 数据目录）
+  - 配置 `../vulnfeed-deploy/config/config.toml`，两个配置文件均 `chmod 600`
+
+## ⚠️ 生产红线（务必遵守）
+
+1. 数据只在 `../vulnfeed-deploy/data/`。升级 = 只重建 `vulnfeed` 应用容器，**绝不**动 postgres 容器和 data 目录。
+2. 应用启动时自动执行数据库迁移（`src/cli.rs` 中 `sqlx::migrate!`），**迁移只进不退**。升级前必查：`git diff main..HEAD -- migrations/`，若出现删列/改类型等非增量迁移，回滚旧镜像会失败。
+3. 标准升级流程（详见运维备忘）：
+   `pg_dump` 备份 → `docker tag` 旧镜像留回滚点 → `docker build` → `docker compose up -d vulnfeed`（仅应用）→ 验证迁移日志 + `curl /` 返回 200。
+4. 安全整改已于 2026-08-28 完成并复测通过：数据库密码、JWT 密钥已换强随机值，5432 端口收敛到 `127.0.0.1`，配置文件 600；admin 密码经用户 2026-09-02 手动登录验证确认已改——**6 项整改全部闭环**，不要回退这些安全配置。记录在 `../vulnfeed-deploy/密码与暴露面整改方案.md` §6。
+
+## 已知环境问题
+
+- **git smart-HTTP 到 github.com 会挂死**（`fetch`/`ls-remote` 超时，而网页与 REST API 正常）。查上游状态改用 GitHub API；拉代码需走 SSH 或排查代理。
+- 低危遗留（无害，勿花时间修）：容器内 `pg_hba` trust 免密条目、`POSTGRES_USERNAME` 应为 `POSTGRES_USER`（笔误）。
+
+## 详细文档索引
+
+| 文档 | 内容 |
+|---|---|
+| `docs/二开与上游同步方案.md` | 多远端同步流程 + 执行记录 |
+| `docs/生产升级与运维备忘.md` | 镜像升级完整手册：备份/构建/发布/验证/回滚命令 |
+| `../vulnfeed-deploy/密码与暴露面整改方案.md` | 安全整改方案 + §6 复测记录 |
