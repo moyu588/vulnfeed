@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { getSecNotices, getNoticeSources } from '../../lib/api'
+
+// 仅允许 http(s) 外链，防止空链接或 javascript: 等非法 URL 造成"点击无反应"或 XSS
+const isSafeExternalUrl = (url) => typeof url === 'string' && /^https?:\/\//i.test(url.trim())
 
 const SecNoticeListPage = () => {
   const [secNotices, setSecNotices] = useState([])
@@ -189,12 +191,19 @@ const SecNoticeListPage = () => {
         <>
           <div className="overflow-hidden bg-white shadow sm:rounded-md">
             <ul className="divide-y divide-gray-200">
-              {secNotices.map((notice) => (
+              {secNotices.map((notice) => {
+                const hasLink = isSafeExternalUrl(notice.detail_link)
+                // 有原始公告链接时整条可点击（新窗口打开）；无链接时降级为普通展示，避免"看似可点却无反应"
+                const ItemWrapper = hasLink ? 'a' : 'div'
+                const wrapperProps = hasLink
+                  ? { href: notice.detail_link.trim(), target: '_blank', rel: 'noopener noreferrer', 'aria-label': notice.title }
+                  : {}
+                return (
                 <li key={notice.id}>
-                  <div className="block hover:bg-gray-50">
+                  <ItemWrapper {...wrapperProps} className="block hover:bg-gray-50">
                     <div className="px-4 py-4 sm:px-6">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-indigo-600 truncate">{notice.title}</p>
+                        <p className={`text-sm font-medium truncate ${hasLink ? 'text-indigo-600' : 'text-gray-900'}`}>{notice.title}</p>
                         <div className="flex flex-shrink-0 ml-2">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             notice.risk_level === 'Critical' ? 'bg-red-100 text-red-800' :
@@ -235,9 +244,10 @@ const SecNoticeListPage = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </ItemWrapper>
                 </li>
-              ))}
+                )
+              })}
             </ul>
           </div>
 
