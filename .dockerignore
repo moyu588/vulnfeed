@@ -1,0 +1,26 @@
+# 构建上下文忽略清单
+# 背景：2026-09-08 构建事故——宿主机 assets/node_modules/（pnpm v10 装的 rollup 4.63.1）
+# 被 COPY assets/ . 带入镜像，与容器内按 lockfile 安装的 rollup 4.48.1 混杂导致构建失败。
+# 详见 docs/生产升级与运维备忘.md §6。
+#
+# ⚠️ 勿排除构建必需项：assets/ 源码、Cargo.toml、Cargo.lock、build.rs、src/、
+#    migrations/（sqlx::migrate! 编译期嵌入）、dev/config.toml.example
+
+# 版本控制与会话文件
+.git
+.gitignore
+.claude/
+
+# 本地构建产物与依赖（关键排除项）
+assets/node_modules/
+assets/public/
+target/
+
+# 日志与备份
+logs/
+*.log
+backup/
+
+# 文档（镜像内不需要）
+docs/
+*.md

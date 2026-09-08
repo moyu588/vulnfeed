@@ -3,6 +3,7 @@
 # By Default, Ignore any .*, except .gitignore
 .*
 !.gitignore
+!.dockerignore
 !.gitattributes
 !.rustfmt.toml
 !.github
