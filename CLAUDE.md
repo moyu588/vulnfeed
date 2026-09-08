@@ -29,6 +29,8 @@
 
 ## ⚠️ 生产红线（务必遵守）
 
+**0. 环境隔离总禁令（2026-09-08 用户确认）**：本仓库 `vulnfeed/` 是**测试环境**源码仓库，`../vulnfeed-deploy/` 是**生产环境**。任何测试部署与验证都**不得触碰生产**，禁区包括：**9000 端口、5432 端口、`../vulnfeed-deploy/data/`、`vulnfeed-net` Docker 网络、生产容器**（`vulnfeed`、`postgres`）。测试验证一律在独立的测试环境（如 `../vulnfeed-test/`）中进行。
+
 1. 数据只在 `../vulnfeed-deploy/data/`。升级 = 只重建 `vulnfeed` 应用容器，**绝不**动 postgres 容器和 data 目录。
 2. 应用启动时自动执行数据库迁移（`src/cli.rs` 中 `sqlx::migrate!`），**迁移只进不退**。升级前必查：`git diff main..HEAD -- migrations/ dev/config.toml.example`——若出现删列/改类型等非增量迁移，回滚旧镜像会失败；若新增必填配置项，旧 `config.toml` 会导致启动失败（服务挂但数据无损）。
 3. 标准升级流程（详见运维备忘）：
@@ -37,7 +39,7 @@
 
 ## 已知环境问题
 
-- **git smart-HTTP 到 github.com 会挂死**（`fetch`/`ls-remote` 超时，而网页与 REST API 正常）。查上游状态改用 GitHub API；拉代码需走 SSH 或排查代理。
+- ~~git smart-HTTP 到 github.com 会挂死~~ **已解决（2026-09-07）**：根因是 `~/.bashrc` 的代理变量为小写（`http_proxy=http://10.10.2.14:7890`）且仅交互式 shell 生效，非交互进程调 git 拿不到。已写入 git 全局配置：`git config --global http.https://github.com.proxy http://10.10.2.14:7890`（仅对 github.com 生效），`git ls-remote`/`fetch` HTTPS 直连已验证可用。同步上游可直接走 HTTPS，不再必须绕 SSH；GitHub API 查状态的方式仍可用。
 - 低危遗留（无害，勿花时间修）：容器内 `pg_hba` trust 免密条目、`POSTGRES_USERNAME` 应为 `POSTGRES_USER`（笔误）。
 
 ## 详细文档索引
