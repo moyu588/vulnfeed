@@ -29,7 +29,7 @@
 
 ## ⚠️ 生产红线（务必遵守）
 
-**0. 环境隔离总禁令（2026-09-08 用户确认）**：本仓库 `vulnfeed/` 是**测试环境**源码仓库，`../vulnfeed-deploy/` 是**生产环境**。任何测试部署与验证都**不得触碰生产**，禁区包括：**9000 端口、5432 端口、`../vulnfeed-deploy/data/`、`vulnfeed-net` Docker 网络、生产容器**（`vulnfeed`、`postgres`）。测试验证一律在独立的测试环境（如 `../vulnfeed-test/`）中进行。
+**0. 生产禁区清单（2026-09-08 用户确认）**：**9000 端口、5432 端口、`../vulnfeed-deploy/data/`、`vulnfeed-net` Docker 网络、生产容器**（`vulnfeed`、`postgres`）。测试验证一律在 `../vulnfeed-test/` 进行，测试服务须绑定内网可达的**非 9000/5432** 端口（隔离与内网访问总原则见用户级 `~/.claude/CLAUDE.md` §2–3，不在此重复）。
 
 1. 数据只在 `../vulnfeed-deploy/data/`。升级 = 只重建 `vulnfeed` 应用容器，**绝不**动 postgres 容器和 data 目录。
 2. 应用启动时自动执行数据库迁移（`src/cli.rs` 中 `sqlx::migrate!`），**迁移只进不退**。升级前必查：`git diff main..HEAD -- migrations/ dev/config.toml.example`——若出现删列/改类型等非增量迁移，回滚旧镜像会失败；若新增必填配置项，旧 `config.toml` 会导致启动失败（服务挂但数据无损）。
